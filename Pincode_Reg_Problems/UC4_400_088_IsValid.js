@@ -11,127 +11,160 @@ console.log(validatePinCode("400088B"));
 console.log(validatePinCode("400 08A"));
 
 // ...existing code...
-// // ...existing code...
-// // Helper: find a locator either on main page or inside any child frame
-// const findLocatorAcrossFrames = async (page, selector) => {
-//   // main page first
+// const clickContactUsSection = async (page) => {
+//   const formParts = [
+//     "#contactUs-inquiryType",
+//     'select[name="inquiryType"]',
+//     "input#email",
+//     "textarea#comments",
+//   ];
+//   const formSelector = formParts.join(", ");
+
+//   // quick exit if already visible
+//   if (
+//     await page
+//       .locator(formSelector)
+//       .first()
+//       .isVisible({ timeout: 1500 })
+//       .catch(() => false)
+//   )
+//     return;
+
+//   await page.evaluate(() => window.scrollBy(0, 300));
+//   await page.waitForTimeout(300);
+
+//   const patterns = ["consumer support", "customer support", "contact us online"];
+
+//   for (const p of patterns) {
+//     const re = new RegExp(p, "i");
+//     try {
+//       const btn = page
+//         .locator('button, summary, [role="button"], a, .accordion-button')
+//         .filter({ hasText: re })
+//         .first();
+
+//       if ((await btn.count().catch(() => 0)) === 0) continue;
+//       if (!(await btn.isVisible({ timeout: 1500 }).catch(() => false))) continue;
+
+//       await safeScrollIntoView(page, btn);
+//       // try normal click first
+//       await btn.click({ force: true }).catch(() => {});
+
+//       // if button targets a collapse panel, wait for that panel to show and for the form inside it
+//       const targetAttr =
+//         (await btn.getAttribute("data-bs-target")) ||
+//         (await btn.getAttribute("data-target")) ||
+//         (await btn.getAttribute("aria-controls")) ||
+//         "";
+//       if (targetAttr) {
+//         const id = targetAttr.replace(/^#/, "").trim();
+//         if (id) {
+//           const targetSel = `#${id}`;
+//           // Wait for standard bootstrap expansion indicators
+//           await page
+//             .waitForSelector(`${targetSel}.show, ${targetSel}[aria-expanded="true"]`, {
+//               timeout: 5000,
+//             })
+//             .catch(() => {});
+//           // build scoped selectors for the form elements inside the collapse target
+//           const scopedFormSel = formParts.map((s) => `${targetSel} ${s}`).join(", ");
+//           const appeared = await page
+//             .locator(scopedFormSel)
+//             .first()
+//             .isVisible({ timeout: 4000 })
+//             .catch(() => false);
+//           if (appeared) return;
+//           // also try waiting for any of the form parts inside the panel to be attached/visible
+//           await page
+//             .locator(scopedFormSel)
+//             .first()
+//             .waitFor({ state: "visible", timeout: 4000 })
+//             .then(() => true)
+//             .catch(() => false);
+//           if (
+//             await page
+//               .locator(scopedFormSel)
+//               .first()
+//               .isVisible({ timeout: 1000 })
+//               .catch(() => false)
+//           )
+//             return;
+//         }
+//       }
+
+//       // If no explicit target or target didn't reveal the form, wait short for general indicators
+//       await page.waitForTimeout(600);
+//       const formAppeared = await page
+//         .locator(formSelector)
+//         .first()
+//         .isVisible({ timeout: 3000 })
+//         .catch(() => false);
+//       if (formAppeared) return;
+
+//       // fallback: try clicking via JS on closest clickable ancestor (handles nested text nodes)
+//       const clicked = await btn.elementHandle().then(async (h) => {
+//         if (!h) return false;
+//         return page
+//           .evaluate((n) => {
+//             try {
+//               const c = n.closest("button, summary, [role='button'], a, .accordion-button");
+//               if (c) { c.click(); return true; }
+//               n.click(); return true;
+//             } catch (e) { return false; }
+//           }, h)
+//           .catch(() => false);
+//       });
+//       if (clicked) {
+//         await page.waitForTimeout(700);
+//         if (
+//           await page
+//             .locator(formSelector)
+//             .first()
+//             .isVisible({ timeout: 4000 })
+//             .catch(() => false)
+//         )
+//           return;
+//       }
+//     } catch (e) {
+//       // try next pattern
+//     }
+//   }
+
+//   // generic fallback: click a few collapsed accordion buttons
 //   try {
-//     const mainCount = await page.locator(selector).first().count().catch(() => 0);
-//     if (mainCount > 0) return { context: page, locator: page.locator(selector) };
+//     await page.evaluate(() => {
+//       const collapsed = Array.from(
+//         document.querySelectorAll(
+//           ".accordion-button.collapsed, [data-bs-toggle='collapse'].collapsed, [data-toggle='collapse'].collapsed"
+//         )
+//       );
+//       for (let i = 0; i < Math.min(collapsed.length, 4); i++) {
+//         try { collapsed[i].click(); } catch (e) {}
+//       }
+//     });
+//     await page.waitForTimeout(900);
+//     if (
+//       await page
+//         .locator(formSelector)
+//         .first()
+//         .isVisible({ timeout: 3000 })
+//         .catch(() => false)
+//     )
+//       return;
 //   } catch (e) {
 //     // ignore
 //   }
 
-//   // then frames
-//   for (const frame of page.frames()) {
-//     try {
-//       const c = await frame.locator(selector).first().count().catch(() => 0);
-//       if (c > 0) return { context: frame, locator: frame.locator(selector) };
-//     } catch (e) {
-//       // ignore cross-origin/access issues
-//     }
-//   }
-
-//   // not found
-//   return { context: page, locator: page.locator(selector) };
-// };
-
-// // Update clickSubmit to search across frames
-// const clickSubmit = async (pageOrFrame) => {
-//   // pageOrFrame is expected to be the top-level page when called from tests
-//   const { context, locator } = await findLocatorAcrossFrames(pageOrFrame, "#submitButton");
-//   if ((await locator.count().catch(() => 0)) > 0 && (await locator.isVisible({ timeout: 2000 }).catch(() => false))) {
-//     await safeScrollIntoView(context, locator);
-//     await locator.click({ force: true });
-//     return;
-//   }
-
-//   // fallback: any submit button across frames
-//   const fallbackSel = 'button[type="submit"]';
-//   const found = await findLocatorAcrossFrames(pageOrFrame, fallbackSel);
-//   if ((await found.locator.count().catch(() => 0)) > 0) {
-//     await safeScrollIntoView(found.context, found.locator);
-//     await found.locator.click({ force: true });
-//   }
-// };
-
-// // Update fillAndSubmitForm to use cross-frame locator resolution
-// const fillAndSubmitForm = async (
-//   page, // keep 'page' param so existing tests don't need changes
-//   {
-//     inquiryType = "Question",
-//     subject = "Business",
-//     checkAge = true,
-//     submit = false,
-//     partialFill = false,
-//     url = "",
-//   } = {}
-// ) => {
-//   // NOTE: dismissCookieBanner should be called by caller before this function
-//   // Resolve inquiry type selector (may be inside a frame)
-//   const inquiry = await findLocatorAcrossFrames(page, "#contactUs-inquiryType");
-//   await safeScrollIntoView(inquiry.context, inquiry.locator);
-//   await inquiry.locator.selectOption(inquiryType).catch(() => {});
-
-//   const subj = await findLocatorAcrossFrames(page, "#contactUs-inquirySubj");
-//   await subj.locator.waitFor({ state: "visible", timeout: 5000 }).catch(() => {});
-//   await safeScrollIntoView(subj.context, subj.locator);
-//   await subj.locator.selectOption(subject).catch(() => {});
-
-//   if (!partialFill) {
-//     const given = await findLocatorAcrossFrames(page, "#givenName");
-//     await safeScrollIntoView(given.context, given.locator);
-//     await given.locator.fill("Test").catch(() => {});
-
-//     const family = await findLocatorAcrossFrames(page, "#familyName");
-//     await safeScrollIntoView(family.context, family.locator);
-//     await family.locator.fill("User").catch(() => {});
-
-//     const emailInput = await findLocatorAcrossFrames(page, "#email");
-//     await safeScrollIntoView(emailInput.context, emailInput.locator);
-//     await emailInput.locator.fill("test@example.com").catch(() => {});
-
-//     const phoneContainer = await findLocatorAcrossFrames(page, "#phoneContainer input");
-//     let phoneTargetLocator = phoneContainer.locator;
-//     const inputsCount = await phoneTargetLocator.count().catch(() => 0);
-//     if (inputsCount > 1) {
-//       phoneTargetLocator = phoneTargetLocator.nth(inputsCount - 1);
-//     } else if (inputsCount === 0) {
-//       // fallback to container itself
-//       const fallback = await findLocatorAcrossFrames(page, "#phoneContainer");
-//       phoneTargetLocator = fallback.locator;
-//     }
-
-//     if ((await phoneTargetLocator.count().catch(() => 0)) > 0 && (await phoneTargetLocator.isVisible({ timeout: 2000 }).catch(() => false))) {
-//       // find context for phoneTargetLocator: try phoneContainer first, else fallback to main page
-//       const phoneCtx = (phoneContainer.context || page);
-//       await safeScrollIntoView(phoneCtx, phoneTargetLocator);
-//       const localPhone = getLocalPhoneNumberForCountry(url);
-//       if (localPhone) {
-//         await phoneTargetLocator.fill(localPhone).catch(() => {});
-//       }
-//     }
-
-//     const comments = await findLocatorAcrossFrames(page, "#comments");
-//     await safeScrollIntoView(comments.context, comments.locator);
-//     await comments.locator.fill("This is a test message").catch(() => {});
-
-//     if (checkAge) {
-//       const age = await findLocatorAcrossFrames(page, "#contact-legalAgeConfirmation");
-//       const ageLabel = await findLocatorAcrossFrames(page, 'label[for="contact-legalAgeConfirmation"]');
-
-//       const exists = await age.locator.waitFor({ state: "attached", timeout: 5000 }).then(() => true).catch(() => false);
-//       if (exists) {
-//         const isChecked = await age.locator.isChecked().catch(() => false);
-//         if (!isChecked) {
-//           await safeScrollIntoView(ageLabel.context, ageLabel.locator);
-//           await ageLabel.locator.click({ force: true }).catch(() => {});
-//         }
-//         await expect(age.locator).toBeChecked();
-//       }
-//     }
-//   }
-
-//   if (submit) await clickSubmit(page);
+//   // Debug: save small DOM snapshot + screenshot to help root-cause
+//   try {
+//     console.log("clickContactUsSection: form not visible after attempts, capturing debug artifacts");
+//     const snap = await page.evaluate(() => {
+//       const el = Array.from(document.querySelectorAll("button, .accordion-button"))
+//         .find(n => /consumer support|contact us/i.test(n.innerText || ""));
+//       return el ? el.outerHTML.slice(0, 2000) : null;
+//     });
+//     if (snap) console.log("Matched button outerHTML (truncated):", snap);
+//     await page.screenshot({ path: `debug-consumer-support-${Date.now()}.png`, fullPage: true });
+//   } catch (e) {}
 // };
 // ...existing code...
