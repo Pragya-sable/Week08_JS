@@ -11,190 +11,107 @@ console.log(validatePinCode("400088B"));
 console.log(validatePinCode("400 08A"));
 
 // ...existing code...
+
+// Click Contact Us section/accordion if form is hidden behind it (TWH sites)
 // const clickContactUsSection = async (page) => {
-//   const formSelectors = [
-//     "#contactUs-inquiryType",
-//     'select[name="inquiryType"]',
-//     "#email",
-//     "#comments",
-//   ];
+//   const formSelector =
+//     '#contactUs-inquiryType, select[name="inquiryType"], input#email, textarea#comments';
 
-//   // Helper: check if any form field is ACTUALLY visible
-//   const isFormVisible = async () => {
-//     return await page
-//       .waitForFunction((selectors) => {
-//         return selectors.some((selector) => {
-//           const el = document.querySelector(selector);
-
-//           if (!el) return false;
-
-//           const style = window.getComputedStyle(el);
-
-//           return (
-//             style.display !== "none" &&
-//             style.visibility !== "hidden" &&
-//             el.offsetHeight > 0 &&
-//             el.getBoundingClientRect().height > 0
-//           );
-//         });
-//       }, formSelectors, { timeout: 3000 })
-//       .then(() => true)
+//   const isFormVisible = () =>
+//     page
+//       .locator(formSelector)
+//       .first()
+//       .isVisible({ timeout: 3000 })
 //       .catch(() => false);
-//   };
 
-//   // Fast exit if form already visible
 //   if (await isFormVisible()) return;
 
-//   const patterns = [
-//     "consumer support",
-//     "customer support",
-//     "contact us online",
-//     "consumer help",
-//     "consumer service",
-//     "consumer assistance",
-//     "write to us",
-//     "send us a message",
-//     "get in touch",
-//     "contact form",
-//     "email us",
-//   ];
+//   // Scroll gradually to trigger lazy-loaded accordions
+//   for (let i = 0; i < 3; i++) {
+//     await page.evaluate(() => window.scrollBy(0, 400));
+//     await page.waitForTimeout(500);
+//   }
+//   await page.evaluate(() => window.scrollTo(0, 0));
+//   await page.waitForTimeout(400);
 
-//   for (const pattern of patterns) {
+//   if (await isFormVisible()) return;
+
+//   const contactKeywords =
+//     /consumer support|consumer service|consumer help|consumer assistance|customer support|customer service|contact us online|contact us|write to us|send us a message|get in touch|contact form|email us|send a message|online contact/i;
+
+//   // Strategy 1: Click collapsed accordion buttons/triggers matching contact keywords
+//   const collapsedTriggers = page.locator(
+//     'button[aria-expanded="false"], [data-bs-toggle="collapse"][aria-expanded="false"], summary'
+//   );
+//   const count = await collapsedTriggers.count().catch(() => 0);
+
+//   for (let i = 0; i < count; i++) {
 //     try {
-//       console.log(`Trying pattern: ${pattern}`);
+//       const el = collapsedTriggers.nth(i);
+//       const text = await el.innerText().catch(() => "");
+//       if (!contactKeywords.test(text)) continue;
 
-//       const re = new RegExp(pattern, "i");
+//       await safeScrollIntoView(page, el);
+//       await el.click({ force: true });
+//       await page.waitForTimeout(800);
 
-//       // All possible clickable accordion/button elements
-//       const candidates = page
-//         .locator(
-//           `
-//           button,
-//           summary,
-//           [role="button"],
-//           a,
-//           .accordion-button,
-//           h2,
-//           h3,
-//           h4,
-//           div
-//         `
-//         )
-//         .filter({ hasText: re });
-
-//       const count = await candidates.count().catch(() => 0);
-
-//       console.log(`Candidates found: ${count}`);
-
-//       for (let i = 0; i < count; i++) {
-//         const el = candidates.nth(i);
-
-//         const visible = await el
-//           .isVisible({ timeout: 1500 })
-//           .catch(() => false);
-
-//         if (!visible) continue;
-
-//         await safeScrollIntoView(page, el);
-
-//         await page.waitForTimeout(500);
-
-//         // Highlight for debugging
-//         await el.highlight().catch(() => {});
-
-//         // Click via JS closest clickable ancestor
-//         const handle = await el.elementHandle();
-
-//         if (handle) {
-//           await page
-//             .evaluate((node) => {
-//               const clickable = node.closest(`
-//                 button,
-//                 summary,
-//                 [role="button"],
-//                 a,
-//                 .accordion-button
-//               `);
-
-//               if (clickable) {
-//                 clickable.click();
-//               } else {
-//                 node.click();
-//               }
-//             }, handle)
-//             .catch(() => {});
-//         } else {
-//           await el.click({ force: true }).catch(() => {});
-//         }
-
-//         console.log(`Clicked pattern: ${pattern}`);
-
-//         // Wait for accordion animation + lazy render
-//         await page.waitForTimeout(2500);
-
-//         // Wait for bootstrap collapse if exists
-//         await page
-//           .waitForSelector(
-//             `
-//             .collapse.show,
-//             [aria-expanded="true"]
-//           `,
-//             { timeout: 4000 }
-//           )
-//           .catch(() => {});
-
-//         // Final visibility check
-//         const appeared = await isFormVisible();
-
-//         console.log(`Form visible: ${appeared}`);
-
-//         if (appeared) {
-//           console.log(`SUCCESS WITH: ${pattern}`);
-//           return;
-//         }
-//       }
+//       if (await isFormVisible()) return;
 //     } catch (e) {
-//       console.log(`FAILED PATTERN: ${pattern}`);
-//       console.log(e);
+//       // try next
 //     }
 //   }
 
-//   // Generic bootstrap fallback
-//   try {
-//     await page.evaluate(() => {
-//       const accordions = Array.from(
-//         document.querySelectorAll(`
-//           .accordion-button.collapsed,
-//           [data-bs-toggle="collapse"].collapsed
-//         `)
-//       );
+//   // Strategy 2: Broader search — any visible clickable element with contact keywords
+//   const candidates = page.locator(
+//     'button, summary, [role="button"], a, .accordion-button, [data-bs-toggle]'
+//   );
+//   const total = await candidates.count().catch(() => 0);
 
-//       for (let i = 0; i < Math.min(accordions.length, 3); i++) {
-//         try {
-//           accordions[i].click();
-//         } catch (e) {}
+//   for (let i = 0; i < total; i++) {
+//     try {
+//       const el = candidates.nth(i);
+//       const text = await el.innerText().catch(() => "");
+//       if (!contactKeywords.test(text)) continue;
+//       if (!(await el.isVisible({ timeout: 1000 }).catch(() => false))) continue;
+
+//       await safeScrollIntoView(page, el);
+//       // Use evaluate click to ensure Bootstrap collapse event fires
+//       const handle = await el.elementHandle();
+//       if (handle) {
+//         await page
+//           .evaluate((n) => {
+//             const btn = n.closest(
+//               'button, summary, [role="button"], a, .accordion-button'
+//             );
+//             (btn || n).click();
+//           }, handle)
+//           .catch(() => {});
+//       } else {
+//         await el.click({ force: true }).catch(() => {});
 //       }
-//     });
 
-//     await page.waitForTimeout(2500);
+//       await page.waitForTimeout(800);
+//       if (await isFormVisible()) return;
+//     } catch (e) {
+//       // try next
+//     }
+//   }
 
-//     if (await isFormVisible()) return;
-//   } catch (e) {}
-
-//   // Final hard wait
-//   await page.waitForFunction((selectors) => {
-//     return selectors.some((selector) => {
-//       const el = document.querySelector(selector);
-
-//       if (!el) return false;
-
-//       const style = window.getComputedStyle(el);
-
-//       return (
-//         style.display !== "none" &&
-//         style.visibility !== "hidden" &&
-//         el.offsetHeight > 0
+//   // Strategy 3: Fallback — click all collapsed accordion buttons (max 5)
+//   await page
+//     .evaluate(() => {
+//       const btns = Array.from(
+//         document.querySelectorAll(
+//           '.accordion-button.collapsed, [data-bs-toggle="collapse"].collapsed'
+//         )
 //       );
-//     });
-//   }, formSelectors, { timeout: 20000 });
+//       btns.slice(0, 5).forEach((b) => {
+//         try {
+//           b.click();
+//         } catch (e) {}
+//       });
+//     })
+//     .catch(() => {});
+
+//   await page.waitForTimeout(1000);
 // };
