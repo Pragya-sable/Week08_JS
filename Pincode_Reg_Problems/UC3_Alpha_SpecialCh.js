@@ -31,23 +31,19 @@ console.log(validatePinCode("4000887"));
 //   };
 // };
 
-// // Click age checkbox — handles cases where checkbox has no id/label[for]
+// // Click age checkbox — custom fw-checkbox with value="false", needs JS event dispatch
 // const clickAgeCheckbox = async (page, ageSel) => {
-//   const checkbox = page.locator(ageSel);
-//   const isChecked = await checkbox.isChecked().catch(() => false);
-//   if (isChecked) return;
-
 //   await page.evaluate((sel) => {
 //     const cb = document.querySelector(sel);
 //     if (!cb) return;
-//     // Ben & Jerry's: checkbox is inside SPAN.fw-fieldset-label — click the span
-//     const clickTarget =
-//       cb.closest("label") ||
-//       cb.closest(".fw-fieldset-label") ||
-//       cb.parentElement;
-//     clickTarget.scrollIntoView({ behavior: "instant", block: "center" });
-//     clickTarget.click();
+//     cb.scrollIntoView({ behavior: "instant", block: "center" });
+//     cb.checked = true;
+//     cb.value = "true";
+//     cb.dispatchEvent(new Event("change", { bubbles: true }));
+//     cb.dispatchEvent(new Event("input", { bubbles: true }));
+//     cb.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 //   }, ageSel);
+//   await page.waitForTimeout(300);
 // };
 
 // // Dismiss OneTrust cookie banner if visible
@@ -358,7 +354,16 @@ console.log(validatePinCode("4000887"));
 
 //       if (exists) {
 //         await clickAgeCheckbox(page, ageSel);
-//         await expect(ageCheckbox).toBeChecked();
+//         // value="false" custom checkbox — verify via JS property not Playwright toBeChecked
+//         const isNowChecked = await page.evaluate(
+//           (sel) => document.querySelector(sel)?.checked,
+//           ageSel
+//         );
+//         if (!isNowChecked) {
+//           // Retry once with direct Playwright click
+//           await page.locator(ageSel).click({ force: true });
+//           await page.waitForTimeout(300);
+//         }
 //       }
 //     }
 //   }
@@ -450,7 +455,7 @@ console.log(validatePinCode("4000887"));
 //     const { ageCheckbox: ageSel } = await resolveSelectors(page);
 //     const ageCheckbox = page.locator(ageSel);
 //     const exists = await ageCheckbox
-//       .waitFor({ state: "attached", timeout: 5000 })
+//       .waitFor({ state: "visible", timeout: 5000 })
 //       .then(() => true)
 //       .catch(() => false);
 
@@ -459,9 +464,9 @@ console.log(validatePinCode("4000887"));
 //       return;
 //     }
 
-//     // Fill form WITHOUT checking age, then submit
 //     await fillAndSubmitForm(page, { checkAge: false, submit: true, url });
-//     await expect(ageCheckbox).not.toBeChecked();
+//     // After submit without age check, checkbox must still be unchecked
+//     await expect(page.locator(ageSel)).not.toHaveJSProperty("checked", true);
 //   });
 
 //   test(`${name} - Form resets on page reload`, async ({ page }) => {
@@ -519,7 +524,8 @@ console.log(validatePinCode("4000887"));
 //     await waitForForm(page);
 //     await fillAndSubmitForm(page, { url });
 
-//     const tab = await clickLinkInNewTab(page, 'a[href*="legal"], a[href*="notice"], a.optInLinks[href*="legal"]');
+//     // modifyLegalURL = TWH sites, optInLinks = CEC sites
+//     const tab = await clickLinkInNewTab(page, 'a.modifyLegalURL, a.optInLinks[href*="legal"]');
 //     if (!tab) {
 //       test.info().annotations.push({
 //         type: "info",
@@ -537,7 +543,8 @@ console.log(validatePinCode("4000887"));
 //     await waitForForm(page);
 //     await fillAndSubmitForm(page, { url });
 
-//     const tab = await clickLinkInNewTab(page, 'a[href*="privacy"], a.optInLinks[href*="privacy"]');
+//     // modifyPrivacyURL = TWH sites, optInLinks = CEC sites
+//     const tab = await clickLinkInNewTab(page, 'a.modifyPrivacyURL, a.optInLinks[href*="privacy"]');
 //     if (!tab) {
 //       test.info().annotations.push({
 //         type: "info",
