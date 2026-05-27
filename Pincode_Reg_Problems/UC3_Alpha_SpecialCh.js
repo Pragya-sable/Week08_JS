@@ -28,10 +28,26 @@ console.log(validatePinCode("4000887"));
 //     ageCheckbox: isCEC
 //       ? "#contact-legalAgeConfirmation"
 //       : "input[name='legalAgeConfirmation']",
-//     ageLabel: isCEC
-//       ? 'label[for="contact-legalAgeConfirmation"]'
-//       : 'label[for="legalAgeConfirmation"]',
 //   };
+// };
+
+// // Click age checkbox — handles cases where checkbox has no id/label[for]
+// const clickAgeCheckbox = async (page, ageSel) => {
+//   const checkbox = page.locator(ageSel);
+//   const isChecked = await checkbox.isChecked().catch(() => false);
+//   if (isChecked) return;
+
+//   await page.evaluate((sel) => {
+//     const cb = document.querySelector(sel);
+//     if (!cb) return;
+//     // Ben & Jerry's: checkbox is inside SPAN.fw-fieldset-label — click the span
+//     const clickTarget =
+//       cb.closest("label") ||
+//       cb.closest(".fw-fieldset-label") ||
+//       cb.parentElement;
+//     clickTarget.scrollIntoView({ behavior: "instant", block: "center" });
+//     clickTarget.click();
+//   }, ageSel);
 // };
 
 // // Dismiss OneTrust cookie banner if visible
@@ -289,7 +305,7 @@ console.log(validatePinCode("4000887"));
 //   } = {}
 // ) => {
 //   await dismissCookieBanner(page);
-//   const { inquiryType: itSel, inquirySubj: isSel, ageCheckbox: ageSel, ageLabel: ageLabelSel } =
+//   const { inquiryType: itSel, inquirySubj: isSel, ageCheckbox: ageSel } =
 //     await resolveSelectors(page);
 
 //   const inquiryTypeLocator = page.locator(itSel);
@@ -335,18 +351,13 @@ console.log(validatePinCode("4000887"));
 
 //     if (checkAge) {
 //       const ageCheckbox = page.locator(ageSel);
-//       const ageLabel = page.locator(ageLabelSel);
 //       const exists = await ageCheckbox
 //         .waitFor({ state: "attached", timeout: 5000 })
 //         .then(() => true)
 //         .catch(() => false);
 
 //       if (exists) {
-//         const isChecked = await ageCheckbox.isChecked().catch(() => false);
-//         if (!isChecked) {
-//           await safeScrollIntoView(page, ageLabel);
-//           await ageLabel.click({ force: true });
-//         }
+//         await clickAgeCheckbox(page, ageSel);
 //         await expect(ageCheckbox).toBeChecked();
 //       }
 //     }
@@ -448,6 +459,7 @@ console.log(validatePinCode("4000887"));
 //       return;
 //     }
 
+//     // Fill form WITHOUT checking age, then submit
 //     await fillAndSubmitForm(page, { checkAge: false, submit: true, url });
 //     await expect(ageCheckbox).not.toBeChecked();
 //   });
@@ -507,7 +519,7 @@ console.log(validatePinCode("4000887"));
 //     await waitForForm(page);
 //     await fillAndSubmitForm(page, { url });
 
-//     const tab = await clickLinkInNewTab(page, 'a.optInLinks[href*="legal"]');
+//     const tab = await clickLinkInNewTab(page, 'a[href*="legal"], a[href*="notice"], a.optInLinks[href*="legal"]');
 //     if (!tab) {
 //       test.info().annotations.push({
 //         type: "info",
@@ -525,7 +537,7 @@ console.log(validatePinCode("4000887"));
 //     await waitForForm(page);
 //     await fillAndSubmitForm(page, { url });
 
-//     const tab = await clickLinkInNewTab(page, 'a.optInLinks[href*="privacy"]');
+//     const tab = await clickLinkInNewTab(page, 'a[href*="privacy"], a.optInLinks[href*="privacy"]');
 //     if (!tab) {
 //       test.info().annotations.push({
 //         type: "info",
