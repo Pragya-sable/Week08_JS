@@ -372,33 +372,36 @@ console.log(validatePinCode("4000887"));
 // };
 
 // const clickLinkInNewTab = async (page, selector) => {
-//   const link = page.locator(selector).first();
+//   // Find the first VISIBLE link matching selector (avoids footer duplicates)
+//   const link = page.locator(selector).filter({ visible: true }).first();
 //   const found = await link
-//     .waitFor({ state: "attached", timeout: 10000 })
+//     .waitFor({ state: "visible", timeout: 10000 })
 //     .then(() => true)
 //     .catch(() => false);
 //   if (!found) return null;
+
 //   await dismissCookieBanner(page);
 //   await safeScrollIntoView(page, link);
-//   await page.waitForTimeout(500);
+//   await page.waitForTimeout(300);
 
-//   const target = await link.getAttribute("target");
-//   if (target === "_blank") {
-//     const [newTab] = await Promise.all([
-//       page.waitForEvent("popup"),
-//       link.click(),
-//     ]);
+//   // Always open in new tab — force popup capture even if target != _blank
+//   const [newTab] = await Promise.all([
+//     page.waitForEvent("popup", { timeout: 10000 }).catch(() => null),
+//     link.click({ force: true }),
+//   ]);
+
+//   if (newTab) {
 //     try {
 //       await newTab.waitForLoadState("load", { timeout: 15000 });
 //     } catch (e) {}
 //     return newTab;
-//   } else {
-//     await link.click();
-//     try {
-//       await page.waitForLoadState("load", { timeout: 15000 });
-//     } catch (e) {}
-//     return page;
 //   }
+
+//   // Link navigated in same tab
+//   try {
+//     await page.waitForLoadState("load", { timeout: 15000 });
+//   } catch (e) {}
+//   return page;
 // };
 
 // test.beforeEach(async ({ page }) => {
