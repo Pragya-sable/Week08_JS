@@ -11,39 +11,9 @@ console.log(validatePinCode("40008A"));
 console.log(validatePinCode("400088 "));
 console.log(validatePinCode("1234@6"));
 console.log(validatePinCode("4000887"));
+
 const { test, expect } = require("@playwright/test");
-const { contactUsTWHUrls } = require("../config/urls");
-
-// CEC sites:  #contactUs-inquiryType / #contactUs-inquirySubj / #contact-legalAgeConfirmation
-// TWH sites (Ben & Jerry's etc): #inquiryType / #inquirySubject / input[name="legalAgeConfirmation"]
-const formSelector =
-  '#contactUs-inquiryType, #inquiryType, select[name="enquiryType"], input#email, textarea#comments';
-
-const resolveSelectors = async (page) => {
-  const isCEC = (await page.locator("#contactUs-inquiryType").count()) > 0;
-  return {
-    inquiryType: isCEC ? "#contactUs-inquiryType" : "#inquiryType",
-    inquirySubj: isCEC ? "#contactUs-inquirySubj" : "#inquirySubject",
-    ageCheckbox: isCEC
-      ? "#contact-legalAgeConfirmation"
-      : "input[name='legalAgeConfirmation']",
-  };
-};
-
-// Click age checkbox — custom fw-checkbox with value="false", needs JS event dispatch
-const clickAgeCheckbox = async (page, ageSel) => {
-  await page.evaluate((sel) => {
-    const cb = document.querySelector(sel);
-    if (!cb) return;
-    cb.scrollIntoView({ behavior: "instant", block: "center" });
-    cb.checked = true;
-    cb.value = "true";
-    cb.dispatchEvent(new Event("change", { bubbles: true }));
-    cb.dispatchEvent(new Event("input", { bubbles: true }));
-    cb.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-  }, ageSel);
-  await page.waitForTimeout(300);
-};
+const { contactUsHCDVUrls } = require("../config/urls");
 
 // Dismiss OneTrust cookie banner if visible
 const dismissCookieBanner = async (page) => {
@@ -86,96 +56,52 @@ const dismissCookieBanner = async (page) => {
   }
 };
 
-// Click Consumer Support accordion button to reveal the contact form
-const clickContactUsSection = async (page) => {
-  const isFormVisible = () =>
-    page
-      .locator(formSelector)
-      .first()
-      .isVisible({ timeout: 2000 })
-      .catch(() => false);
+// Wait for HCDV form - Adobe Classic injects fields dynamically, needs longer waits
+const waitForForm = async (page, maxScrollAttempts = 10) => {
+  const formSelector =
+    '#contactUs-inquiryType, select[name="inquiryType"], input#email, textarea#comments';
 
-  if (await isFormVisible()) return;
-
-  // Scroll down to trigger lazy-loaded content, then back to top
-  await page.evaluate(() => window.scrollBy(0, 600));
-  await page.waitForTimeout(500);
-  await page.evaluate(() => window.scrollTo(0, 0));
-  await page.waitForTimeout(300);
-
-  if (await isFormVisible()) return;
-
-  // Use native JS click on accordion buttons only — avoids wrong element match
-  const clicked = await page.evaluate(() => {
-    const keywords =
-      /consumer support|consumer service|consumer help|consumer assistance|customer support|customer service|contact us online|write to us|send us a message|get in touch|contact form|email us|send a message|online contact/i;
-
-    const buttons = Array.from(
-      document.querySelectorAll(
-        'button.accordion-button, button[data-bs-toggle="collapse"], button[data-toggle="collapse"], summary, button[aria-expanded]'
-      )
-    );
-
-    for (const btn of buttons) {
-      const ownText =
-        Array.from(btn.childNodes)
-          .filter((n) => n.nodeType === Node.TEXT_NODE)
-          .map((n) => n.textContent)
-          .join(" ")
-          .trim() || btn.innerText.trim();
-
-      if (!keywords.test(ownText)) continue;
-
-      const style = window.getComputedStyle(btn);
-      if (style.display === "none" || style.visibility === "hidden") continue;
-
-      btn.scrollIntoView({ behavior: "instant", block: "center" });
-      btn.click();
-      return true;
-    }
-    return false;
-  });
-
-  if (clicked) {
-    await page.waitForTimeout(900);
-    if (await isFormVisible()) return;
-  }
-
-  // Fallback: Playwright button locator with label text
-  const labels = [
-    "Consumer Support",
-    "Consumer Service",
-    "Consumer Help",
-    "Customer Support",
-    "Write To Us",
-    "Contact Us Online",
-    "Send Us A Message",
-    "Get In Touch",
-  ];
-
-  for (const label of labels) {
-    try {
-      const btn = page.locator("button").filter({ hasText: label }).first();
-      if (!(await btn.isVisible({ timeout: 1500 }).catch(() => false)))
-        continue;
-      await btn.scrollIntoViewIfNeeded();
-      await btn.click({ force: true });
-      await page.waitForTimeout(900);
-      if (await isFormVisible()) return;
-    } catch (e) {
-      // try next
-    }
-  }
-};
-
-const waitForForm = async (page) => {
   await page.waitForLoadState("domcontentloaded");
-  await dismissCookieBanner(page);
-  await clickContactUsSection(page);
-  await page
+
+  const alreadyVisible = await page
     .locator(formSelector)
     .first()
-    .waitFor({ state: "visible", timeout: 15000 });
+    .isVisible({ timeout: 20000 })
+    .catch(() => false);
+
+  if (!alreadyVisible) {
+    const pageHeight = await page.evaluate(() => document.body.scrollHeight);
+    const scrollStep = Math.floor(pageHeight / maxScrollAttempts);
+
+    for (let attempt = 0; attempt < maxScrollAttempts; attempt++) {
+      const isVisible = await page
+        .locator(formSelector)
+        .first()
+        .isVisible({ timeout: 5000 })
+        .catch(() => false);
+
+      if (isVisible) break;
+
+      await page.evaluate((step) => window.scrollBy(0, step), scrollStep);
+      await page.waitForTimeout(1000);
+    }
+
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.waitForTimeout(500);
+
+    await page
+      .locator(formSelector)
+      .first()
+      .waitFor({ state: "visible", timeout: 40000 });
+  }
+
+  // Wait for ALL Adobe Classic injected fields to be ready
+  await Promise.all([
+    page.locator("#givenName").waitFor({ state: "visible", timeout: 30000 }),
+    page.locator("#familyName").waitFor({ state: "visible", timeout: 30000 }),
+    page.locator("#email").waitFor({ state: "visible", timeout: 30000 }),
+    page.locator("#comments").waitFor({ state: "visible", timeout: 30000 }),
+  ]).catch(() => {});
 };
 
 const clickSubmit = async (page) => {
@@ -227,10 +153,9 @@ const safeScrollIntoView = async (page, locator) => {
     await page.waitForTimeout(300);
     const isCovered = await page.evaluate((el) => {
       const rect = el.getBoundingClientRect();
-      const topElement = document.elementFromPoint(
-        rect.left + rect.width / 2,
-        rect.top + rect.height / 2
-      );
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      const topElement = document.elementFromPoint(centerX, centerY);
       return topElement ? !el.contains(topElement) && topElement !== el : false;
     }, element);
 
@@ -238,7 +163,7 @@ const safeScrollIntoView = async (page, locator) => {
       await page.evaluate(() => window.scrollBy(0, 80));
       await page.waitForTimeout(200);
     }
-  } catch (e) {
+  } catch (error) {
     // Ignore scroll issues
   }
 };
@@ -301,19 +226,13 @@ const fillAndSubmitForm = async (
   } = {}
 ) => {
   await dismissCookieBanner(page);
-  const {
-    inquiryType: itSel,
-    inquirySubj: isSel,
-    ageCheckbox: ageSel,
-  } = await resolveSelectors(page);
-
-  const inquiryTypeLocator = page.locator(itSel);
+  const inquiryTypeLocator = page.locator("#contactUs-inquiryType");
   await safeScrollIntoView(page, inquiryTypeLocator);
-  await page.selectOption(itSel, inquiryType);
-  await page.waitForSelector(isSel, { state: "visible" });
-  const inquirySubjLocator = page.locator(isSel);
+  await page.selectOption("#contactUs-inquiryType", inquiryType);
+  await page.waitForSelector("#contactUs-inquirySubj", { state: "visible" });
+  const inquirySubjLocator = page.locator("#contactUs-inquirySubj");
   await safeScrollIntoView(page, inquirySubjLocator);
-  await page.selectOption(isSel, subject);
+  await page.selectOption("#contactUs-inquirySubj", subject);
 
   if (!partialFill) {
     const givenName = page.locator("#givenName");
@@ -328,15 +247,16 @@ const fillAndSubmitForm = async (
     await safeScrollIntoView(page, emailInput);
     await emailInput.fill("test@example.com");
 
-    // Phone: try #phoneContainer inputs first, then name="phone"
     const phoneInputs = page.locator("#phoneContainer input");
+    let phoneTarget;
     const inputsCount = await phoneInputs.count().catch(() => 0);
-    let phoneTarget =
-      inputsCount > 1
-        ? phoneInputs.nth(inputsCount - 1)
-        : inputsCount === 1
-        ? phoneInputs.first()
-        : page.locator("input[name='phone']");
+    if (inputsCount > 1) {
+      phoneTarget = phoneInputs.nth(inputsCount - 1);
+    } else if (inputsCount === 1) {
+      phoneTarget = phoneInputs.first();
+    } else {
+      phoneTarget = page.locator("#phoneContainer");
+    }
 
     if (await phoneTarget.isVisible({ timeout: 2000 }).catch(() => false)) {
       await safeScrollIntoView(page, phoneTarget);
@@ -349,24 +269,22 @@ const fillAndSubmitForm = async (
     await comments.fill("This is a test message");
 
     if (checkAge) {
-      const ageCheckbox = page.locator(ageSel);
+      const ageCheckbox = page.locator("#contact-legalAgeConfirmation");
+      const ageLabel = page.locator(
+        'label[for="contact-legalAgeConfirmation"]'
+      );
       const exists = await ageCheckbox
-        .waitFor({ state: "attached", timeout: 5000 })
+        .waitFor({ state: "visible", timeout: 10000 })
         .then(() => true)
         .catch(() => false);
 
       if (exists) {
-        await clickAgeCheckbox(page, ageSel);
-        // value="false" custom checkbox — verify via JS property not Playwright toBeChecked
-        const isNowChecked = await page.evaluate(
-          (sel) => document.querySelector(sel)?.checked,
-          ageSel
-        );
-        if (!isNowChecked) {
-          // Retry once with direct Playwright click
-          await page.locator(ageSel).click({ force: true });
-          await page.waitForTimeout(300);
+        const isChecked = await ageCheckbox.isChecked().catch(() => false);
+        if (!isChecked) {
+          await safeScrollIntoView(page, ageLabel);
+          await ageLabel.click({ force: true });
         }
+        await expect(ageCheckbox).toBeChecked();
       }
     }
   }
@@ -375,35 +293,33 @@ const fillAndSubmitForm = async (
 };
 
 const clickLinkInNewTab = async (page, selector) => {
-  // Scroll through all matching links to find the visible one in the form
-  const links = page.locator(selector);
-  const count = await links.count().catch(() => 0);
-  if (count === 0) return null;
-
-  let link = null;
-  for (let i = 0; i < count; i++) {
-    const el = links.nth(i);
-    if (await el.isVisible({ timeout: 2000 }).catch(() => false)) {
-      link = el;
-      break;
-    }
-  }
-  if (!link) return null;
-
+  const link = page.locator(selector).first();
+  const found = await link
+    .waitFor({ state: "attached", timeout: 10000 })
+    .then(() => true)
+    .catch(() => false);
+  if (!found) return null;
   await dismissCookieBanner(page);
   await safeScrollIntoView(page, link);
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(500);
 
-  // target=_blank — capture popup
-  const [newTab] = await Promise.all([
-    page.waitForEvent("popup", { timeout: 15000 }),
-    link.click({ force: true }),
-  ]);
-
-  try {
-    await newTab.waitForLoadState("load", { timeout: 15000 });
-  } catch (e) {}
-  return newTab;
+  const target = await link.getAttribute("target");
+  if (target === "_blank") {
+    const [newTab] = await Promise.all([
+      page.waitForEvent("popup"),
+      link.click(),
+    ]);
+    try {
+      await newTab.waitForLoadState("load", { timeout: 15000 });
+    } catch (e) {}
+    return newTab;
+  } else {
+    await link.click();
+    try {
+      await page.waitForLoadState("load", { timeout: 15000 });
+    } catch (e) {}
+    return page;
+  }
 };
 
 test.beforeEach(async ({ page }) => {
@@ -414,7 +330,7 @@ test.beforeEach(async ({ page }) => {
   await dismissCookieBanner(page);
 });
 
-for (const { name, url } of contactUsTWHUrls) {
+for (const { name, url } of contactUsHCDVUrls) {
   test(`${name} - Required field validation on empty submit`, async ({
     page,
   }) => {
@@ -457,10 +373,9 @@ for (const { name, url } of contactUsTWHUrls) {
     await dismissCookieBanner(page);
     await waitForForm(page);
 
-    const { ageCheckbox: ageSel } = await resolveSelectors(page);
-    const ageCheckbox = page.locator(ageSel);
+    const ageCheckbox = page.locator("#contact-legalAgeConfirmation");
     const exists = await ageCheckbox
-      .waitFor({ state: "visible", timeout: 5000 })
+      .waitFor({ state: "attached", timeout: 5000 })
       .then(() => true)
       .catch(() => false);
 
@@ -470,19 +385,18 @@ for (const { name, url } of contactUsTWHUrls) {
     }
 
     await fillAndSubmitForm(page, { checkAge: false, submit: true, url });
-    // After submit without age check, checkbox must still be unchecked
-    await expect(page.locator(ageSel)).not.toHaveJSProperty("checked", true);
+    await expect(ageCheckbox).not.toBeChecked();
   });
 
   test(`${name} - Form resets on page reload`, async ({ page }) => {
     await page.goto(url, { timeout: 60000 });
     await dismissCookieBanner(page);
     await waitForForm(page);
-    const { inquiryType: itSel } = await resolveSelectors(page);
-    await page.selectOption(itSel, "Question");
+    await page.selectOption("#contactUs-inquiryType", "Question");
     await page.reload();
     await waitForForm(page);
-    await expect(page.locator(itSel)).toHaveValue("DEFAULT");
+
+    await expect(page.locator("#contactUs-inquiryType")).toHaveValue("DEFAULT");
   });
 
   test(`${name} - Successful form submission shows confirmation`, async ({
@@ -507,20 +421,7 @@ for (const { name, url } of contactUsTWHUrls) {
     await fillAndSubmitForm(page, { submit: true, url });
     await dismissCookieBanner(page);
 
-    const confirmBtn = page.locator("#confirmButton");
-    if (await confirmBtn.isVisible({ timeout: 10000 }).catch(() => false)) {
-      await confirmBtn.click({ force: true });
-    }
-
-    const successMsg = page.locator("#successMsg");
-    if (await successMsg.isVisible({ timeout: 10000 }).catch(() => false)) {
-      await expect(successMsg).toBeVisible({ timeout: 30000 });
-    } else {
-      const fallbackSuccess = page.locator(
-        "text=/thank you|merci|gracias|we have received|submission received/i"
-      );
-      await expect(fallbackSuccess).toBeVisible({ timeout: 30000 });
-    }
+    await expect(page.locator("#successMsg")).toBeVisible({ timeout: 30000 });
   });
 
   test(`${name} - Legal notice link opens in new tab`, async ({ page }) => {
@@ -529,19 +430,29 @@ for (const { name, url } of contactUsTWHUrls) {
     await waitForForm(page);
     await fillAndSubmitForm(page, { url });
 
-    // modifyLegalURL = TWH sites, optInLinks = CEC sites
-    const tab = await clickLinkInNewTab(
-      page,
-      'a.modifyLegalURL, a.optInLinks[href*="legal"]'
-    );
-    if (!tab) {
-      test.info().annotations.push({
-        type: "info",
-        description: "Legal link not found in form",
-      });
-      return;
-    }
-    await expect(tab).toHaveURL(/legal|privacy|unilever|notices/i);
+    const link = page.locator('a.optInLinks[href*="legal"]').first();
+    await expect(
+      link,
+      "Legal notice link should be present in form"
+    ).toBeVisible({ timeout: 10000 });
+    const tab = await clickLinkInNewTab(page, 'a.optInLinks[href*="legal"]');
+    await expect(tab).toHaveURL(/legal|unilever|notices/i);
+    if (tab !== page) await tab.close();
+  });
+
+  test(`${name} - Cookie notice link opens in new tab`, async ({ page }) => {
+    await page.goto(url, { timeout: 60000 });
+    await dismissCookieBanner(page);
+    await waitForForm(page);
+    await fillAndSubmitForm(page, { url });
+
+    const link = page.locator('a.optInLinks[href*="cookie"]').first();
+    await expect(
+      link,
+      "Cookie notice link should be present in form"
+    ).toBeVisible({ timeout: 10000 });
+    const tab = await clickLinkInNewTab(page, 'a.optInLinks[href*="cookie"]');
+    await expect(tab).toHaveURL(/cookie|unilever|notices/i);
     if (tab !== page) await tab.close();
   });
 
@@ -551,18 +462,12 @@ for (const { name, url } of contactUsTWHUrls) {
     await waitForForm(page);
     await fillAndSubmitForm(page, { url });
 
-    // modifyPrivacyURL = TWH sites, optInLinks = CEC sites
-    const tab = await clickLinkInNewTab(
-      page,
-      'a.modifyPrivacyURL, a.optInLinks[href*="privacy"]'
-    );
-    if (!tab) {
-      test.info().annotations.push({
-        type: "info",
-        description: "Privacy link not found in form",
-      });
-      return;
-    }
+    const link = page.locator('a.optInLinks[href*="privacy"]').first();
+    await expect(
+      link,
+      "Privacy notice link should be present in form"
+    ).toBeVisible({ timeout: 10000 });
+    const tab = await clickLinkInNewTab(page, 'a.optInLinks[href*="privacy"]');
     await expect(tab).toHaveURL(/privacy|unilever|notices/i);
     if (tab !== page) await tab.close();
   });
