@@ -15,8 +15,9 @@ console.log(validatePinCode("4000887"));
 const { test, expect } = require("@playwright/test");
 const { contactUsHCDVUrls } = require("../config/urls");
 
-// Dismiss OneTrust cookie banner if visible
+// Dismiss OneTrust cookie banner and Privacy Preference Center if visible
 const dismissCookieBanner = async (page) => {
+  // Dismiss OneTrust accept button
   try {
     await page.waitForSelector("#onetrust-accept-btn-handler", {
       timeout: 10000,
@@ -26,9 +27,18 @@ const dismissCookieBanner = async (page) => {
     await page
       .locator("#onetrust-accept-btn-handler")
       .waitFor({ state: "hidden", timeout: 5000 });
-  } catch (e) {
-    // Ignore if not present
-  }
+  } catch (e) {}
+
+  // Dismiss OneTrust Privacy Preference Center modal if open
+  try {
+    const prefCenter = page.locator(
+      '[role="dialog"] .save-preference-btn-handler'
+    );
+    if (await prefCenter.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await prefCenter.click({ force: true });
+      await page.waitForTimeout(500);
+    }
+  } catch (e) {}
 
   const dismissSelectors = [
     'text="No, gracias"',
@@ -50,50 +60,43 @@ const dismissCookieBanner = async (page) => {
         await page.waitForTimeout(500);
         break;
       }
-    } catch (e) {
-      // Continue to next selector
-    }
+    } catch (e) {}
   }
 };
 
 // Wait for HCDV form - Adobe Classic injects fields dynamically, needs longer waits
-const waitForForm = async (page, maxScrollAttempts = 10) => {
+const waitForForm = async (page, maxScrollAttempts = 15) => {
   const formSelector =
     '#contactUs-inquiryType, select[name="inquiryType"], input#email, textarea#comments';
 
   await page.waitForLoadState("domcontentloaded");
+  await dismissCookieBanner(page);
 
-  const alreadyVisible = await page
-    .locator(formSelector)
-    .first()
-    .isVisible({ timeout: 20000 })
-    .catch(() => false);
+  // Scroll down to find form since it loads below viewport
+  const pageHeight = await page.evaluate(() => document.body.scrollHeight);
+  const scrollStep = Math.floor(pageHeight / maxScrollAttempts);
 
-  if (!alreadyVisible) {
-    const pageHeight = await page.evaluate(() => document.body.scrollHeight);
-    const scrollStep = Math.floor(pageHeight / maxScrollAttempts);
-
-    for (let attempt = 0; attempt < maxScrollAttempts; attempt++) {
-      const isVisible = await page
-        .locator(formSelector)
-        .first()
-        .isVisible({ timeout: 5000 })
-        .catch(() => false);
-
-      if (isVisible) break;
-
-      await page.evaluate((step) => window.scrollBy(0, step), scrollStep);
-      await page.waitForTimeout(1000);
-    }
-
-    await page.evaluate(() => window.scrollTo(0, 0));
-    await page.waitForTimeout(500);
-
-    await page
+  for (let attempt = 0; attempt < maxScrollAttempts; attempt++) {
+    const isVisible = await page
       .locator(formSelector)
       .first()
-      .waitFor({ state: "visible", timeout: 40000 });
+      .isVisible({ timeout: 3000 })
+      .catch(() => false);
+
+    if (isVisible) break;
+
+    await page.evaluate((step) => window.scrollBy(0, step), scrollStep);
+    await page.waitForTimeout(800);
   }
+
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(500);
+
+  // Wait for form to be visible after scroll back to top
+  await page
+    .locator(formSelector)
+    .first()
+    .waitFor({ state: "visible", timeout: 40000 });
 
   // Wait for ALL Adobe Classic injected fields to be ready
   await Promise.all([
@@ -300,21 +303,23 @@ const clickLinkInNewTab = async (page, selector) => {
     .catch(() => false);
   if (!found) return null;
   await dismissCookieBanner(page);
-  await safeScrollIntoView(page, link);
+  // Scroll link into view - optInLinks are deep in page (~2200px)
+  await link.scrollIntoViewIfNeeded();
   await page.waitForTimeout(500);
+  await dismissCookieBanner(page);
 
   const target = await link.getAttribute("target");
   if (target === "_blank") {
     const [newTab] = await Promise.all([
       page.waitForEvent("popup"),
-      link.click(),
+      link.click({ force: true }),
     ]);
     try {
       await newTab.waitForLoadState("load", { timeout: 15000 });
     } catch (e) {}
     return newTab;
   } else {
-    await link.click();
+    await link.click({ force: true });
     try {
       await page.waitForLoadState("load", { timeout: 15000 });
     } catch (e) {}
