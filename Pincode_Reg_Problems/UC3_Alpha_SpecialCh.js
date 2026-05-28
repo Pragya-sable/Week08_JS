@@ -65,46 +65,27 @@ const dismissCookieBanner = async (page) => {
 };
 
 // Wait for HCDV form - Adobe Classic injects fields dynamically, needs longer waits
-const waitForForm = async (page, maxScrollAttempts = 15) => {
-  const formSelector =
-    '#contactUs-inquiryType, select[name="inquiryType"], input#email, textarea#comments';
-
+const waitForForm = async (page) => {
   await page.waitForLoadState("domcontentloaded");
   await dismissCookieBanner(page);
 
-  // Scroll down to find form since it loads below viewport
-  const pageHeight = await page.evaluate(() => document.body.scrollHeight);
-  const scrollStep = Math.floor(pageHeight / maxScrollAttempts);
-
-  for (let attempt = 0; attempt < maxScrollAttempts; attempt++) {
-    const isVisible = await page
-      .locator(formSelector)
-      .first()
-      .isVisible({ timeout: 3000 })
-      .catch(() => false);
-
-    if (isVisible) break;
-
-    await page.evaluate((step) => window.scrollBy(0, step), scrollStep);
-    await page.waitForTimeout(800);
-  }
-
+  // Form is at ~877px, scroll down to trigger lazy load then back up
+  await page.evaluate(() => window.scrollTo(0, 1200));
+  await page.waitForTimeout(1500);
+  await dismissCookieBanner(page);
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.waitForTimeout(500);
 
-  // Wait for form to be visible after scroll back to top
+  // Wait for form fields to be ready
   await page
-    .locator(formSelector)
-    .first()
+    .locator("#contactUs-inquiryType")
     .waitFor({ state: "visible", timeout: 40000 });
-
-  // Wait for ALL Adobe Classic injected fields to be ready
   await Promise.all([
     page.locator("#givenName").waitFor({ state: "visible", timeout: 30000 }),
     page.locator("#familyName").waitFor({ state: "visible", timeout: 30000 }),
     page.locator("#email").waitFor({ state: "visible", timeout: 30000 }),
     page.locator("#comments").waitFor({ state: "visible", timeout: 30000 }),
-  ]).catch(() => {});
+  ]);
 };
 
 const clickSubmit = async (page) => {
@@ -303,10 +284,8 @@ const clickLinkInNewTab = async (page, selector) => {
     .catch(() => false);
   if (!found) return null;
   await dismissCookieBanner(page);
-  // Scroll link into view - optInLinks are deep in page (~2200px)
-  await link.scrollIntoViewIfNeeded();
+  await safeScrollIntoView(page, link);
   await page.waitForTimeout(500);
-  await dismissCookieBanner(page);
 
   const target = await link.getAttribute("target");
   if (target === "_blank") {
@@ -425,6 +404,11 @@ for (const { name, url } of contactUsHCDVUrls) {
     await waitForForm(page);
     await fillAndSubmitForm(page, { submit: true, url });
     await dismissCookieBanner(page);
+
+    const confirmBtn = page.locator("#confirmButton");
+    if (await confirmBtn.isVisible({ timeout: 10000 }).catch(() => false)) {
+      await confirmBtn.click({ force: true });
+    }
 
     await expect(page.locator("#successMsg")).toBeVisible({ timeout: 30000 });
   });
