@@ -65,27 +65,51 @@ const dismissCookieBanner = async (page) => {
 };
 
 // Wait for HCDV form - Adobe Classic injects fields dynamically, needs longer waits
-const waitForForm = async (page) => {
+const waitForForm = async (page, maxScrollAttempts = 10) => {
+  const formSelector =
+    '#contactUs-inquiryType, select[name="inquiryType"], input#email, textarea#comments';
+
   await page.waitForLoadState("domcontentloaded");
-  await dismissCookieBanner(page);
 
-  // Form is at ~877px, scroll down to trigger lazy load then back up
-  await page.evaluate(() => window.scrollTo(0, 1200));
-  await page.waitForTimeout(1500);
-  await dismissCookieBanner(page);
-  await page.evaluate(() => window.scrollTo(0, 0));
-  await page.waitForTimeout(500);
+  const alreadyVisible = await page
+    .locator(formSelector)
+    .first()
+    .isVisible({ timeout: 20000 })
+    .catch(() => false);
 
-  // Wait for form fields to be ready
-  await page
-    .locator("#contactUs-inquiryType")
-    .waitFor({ state: "visible", timeout: 40000 });
+  if (!alreadyVisible) {
+    const pageHeight = await page.evaluate(() => document.body.scrollHeight);
+    const scrollStep = Math.floor(pageHeight / maxScrollAttempts);
+
+    for (let attempt = 0; attempt < maxScrollAttempts; attempt++) {
+      const isVisible = await page
+        .locator(formSelector)
+        .first()
+        .isVisible({ timeout: 5000 })
+        .catch(() => false);
+
+      if (isVisible) break;
+
+      await page.evaluate((step) => window.scrollBy(0, step), scrollStep);
+      await page.waitForTimeout(1000);
+    }
+
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.waitForTimeout(500);
+
+    await page
+      .locator(formSelector)
+      .first()
+      .waitFor({ state: "visible", timeout: 40000 });
+  }
+
+  // Wait for ALL Adobe Classic injected fields to be ready
   await Promise.all([
     page.locator("#givenName").waitFor({ state: "visible", timeout: 30000 }),
     page.locator("#familyName").waitFor({ state: "visible", timeout: 30000 }),
     page.locator("#email").waitFor({ state: "visible", timeout: 30000 }),
     page.locator("#comments").waitFor({ state: "visible", timeout: 30000 }),
-  ]);
+  ]).catch(() => {});
 };
 
 const clickSubmit = async (page) => {
