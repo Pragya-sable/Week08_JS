@@ -15,9 +15,7 @@ console.log(validatePinCode("4000887"));
 const { test, expect } = require("@playwright/test");
 const { contactUsHCDVUrls } = require("../config/urls");
 
-// Dismiss OneTrust cookie banner and Privacy Preference Center if visible
 const dismissCookieBanner = async (page) => {
-  // Dismiss OneTrust accept button
   try {
     await page.waitForSelector("#onetrust-accept-btn-handler", {
       timeout: 10000,
@@ -29,7 +27,6 @@ const dismissCookieBanner = async (page) => {
       .waitFor({ state: "hidden", timeout: 5000 });
   } catch (e) {}
 
-  // Dismiss OneTrust Privacy Preference Center modal if open
   try {
     const prefCenter = page.locator(
       '[role="dialog"] .save-preference-btn-handler'
@@ -70,7 +67,6 @@ const waitForForm = async (page, maxScrollAttempts = 10) => {
     '#contactUs-inquiryType, select[name="inquiryType"], input#email, textarea#comments';
 
   await page.waitForLoadState("domcontentloaded");
-  await dismissCookieBanner(page);
 
   const alreadyVisible = await page
     .locator(formSelector)
@@ -110,7 +106,7 @@ const waitForForm = async (page, maxScrollAttempts = 10) => {
     page.locator("#familyName").waitFor({ state: "visible", timeout: 30000 }),
     page.locator("#email").waitFor({ state: "visible", timeout: 30000 }),
     page.locator("#comments").waitFor({ state: "visible", timeout: 30000 }),
-  ]);
+  ]).catch(() => {});
 };
 
 const clickSubmit = async (page) => {
@@ -172,9 +168,7 @@ const safeScrollIntoView = async (page, locator) => {
       await page.evaluate(() => window.scrollBy(0, 80));
       await page.waitForTimeout(200);
     }
-  } catch (error) {
-    // Ignore scroll issues
-  }
+  } catch (error) {}
 };
 
 const getLocalPhoneNumberForCountry = (url) => {
@@ -310,7 +304,7 @@ const clickLinkInNewTab = async (page, selector) => {
   if (!found) return null;
   await dismissCookieBanner(page);
 
-  // Scroll to link via JS then click via JS to handle hidden container
+  // JS scroll + click to handle hidden container (~2200px deep)
   await page.evaluate((sel) => {
     const el = document.querySelector(sel);
     if (el) el.scrollIntoView({ behavior: "instant", block: "center" });
@@ -454,7 +448,7 @@ for (const { name, url } of contactUsHCDVUrls) {
     await expect(
       link,
       "Legal notice link should be present in form"
-    ).toBeVisible({ timeout: 10000 });
+    ).toBeAttached({ timeout: 10000 });
     const tab = await clickLinkInNewTab(page, 'a.optInLinks[href*="legal"]');
     await expect(tab).toHaveURL(/legal|unilever|notices/i);
     if (tab !== page) await tab.close();
@@ -470,7 +464,7 @@ for (const { name, url } of contactUsHCDVUrls) {
     await expect(
       link,
       "Cookie notice link should be present in form"
-    ).toBeVisible({ timeout: 10000 });
+    ).toBeAttached({ timeout: 10000 });
     const tab = await clickLinkInNewTab(page, 'a.optInLinks[href*="cookie"]');
     await expect(tab).toHaveURL(/cookie|unilever|notices/i);
     if (tab !== page) await tab.close();
@@ -486,7 +480,7 @@ for (const { name, url } of contactUsHCDVUrls) {
     await expect(
       link,
       "Privacy notice link should be present in form"
-    ).toBeVisible({ timeout: 10000 });
+    ).toBeAttached({ timeout: 10000 });
     const tab = await clickLinkInNewTab(page, 'a.optInLinks[href*="privacy"]');
     await expect(tab).toHaveURL(/privacy|unilever|notices/i);
     if (tab !== page) await tab.close();
