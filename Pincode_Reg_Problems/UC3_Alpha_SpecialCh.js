@@ -70,6 +70,7 @@ const waitForForm = async (page, maxScrollAttempts = 10) => {
     '#contactUs-inquiryType, select[name="inquiryType"], input#email, textarea#comments';
 
   await page.waitForLoadState("domcontentloaded");
+  await dismissCookieBanner(page);
 
   const alreadyVisible = await page
     .locator(formSelector)
@@ -109,7 +110,7 @@ const waitForForm = async (page, maxScrollAttempts = 10) => {
     page.locator("#familyName").waitFor({ state: "visible", timeout: 30000 }),
     page.locator("#email").waitFor({ state: "visible", timeout: 30000 }),
     page.locator("#comments").waitFor({ state: "visible", timeout: 30000 }),
-  ]).catch(() => {});
+  ]);
 };
 
 const clickSubmit = async (page) => {
@@ -308,21 +309,27 @@ const clickLinkInNewTab = async (page, selector) => {
     .catch(() => false);
   if (!found) return null;
   await dismissCookieBanner(page);
-  await safeScrollIntoView(page, link);
+
+  // Scroll to link via JS then click via JS to handle hidden container
+  await page.evaluate((sel) => {
+    const el = document.querySelector(sel);
+    if (el) el.scrollIntoView({ behavior: "instant", block: "center" });
+  }, selector);
   await page.waitForTimeout(500);
+  await dismissCookieBanner(page);
 
   const target = await link.getAttribute("target");
   if (target === "_blank") {
     const [newTab] = await Promise.all([
       page.waitForEvent("popup"),
-      link.click({ force: true }),
+      page.evaluate((sel) => document.querySelector(sel).click(), selector),
     ]);
     try {
       await newTab.waitForLoadState("load", { timeout: 15000 });
     } catch (e) {}
     return newTab;
   } else {
-    await link.click({ force: true });
+    await page.evaluate((sel) => document.querySelector(sel).click(), selector);
     try {
       await page.waitForLoadState("load", { timeout: 15000 });
     } catch (e) {}
