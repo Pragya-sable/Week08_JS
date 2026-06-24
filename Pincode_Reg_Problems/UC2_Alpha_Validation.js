@@ -143,96 +143,87 @@ module.exports = async function globalTeardown() {
 <title>Playwright Test Report</title>
 
 <style>
-
 body{
-
-    font-family:Arial,sans-serif;
-    background:#f4f6f8;
-    padding:30px;
+    font-family: Arial, Helvetica, sans-serif;
+    background:#f5f5f5;
     color:#333;
-
+    margin:20px;
+    font-size:11px;
+    line-height:1.3;
 }
 
 .container{
-
-    max-width:1200px;
+    max-width:1100px;
     margin:auto;
     background:#fff;
-    padding:25px;
-    border-radius:8px;
-
+    padding:20px;
+    border:1px solid #ddd;
 }
 
 h1{
+    font-size:22px;
+    margin:0 0 10px;
+    color:#1f2937;
+}
 
-    margin:0;
-    color:#222;
-
+h2{
+    font-size:16px;
+    margin:20px 0 10px;
+    color:#1f2937;
 }
 
 .summary{
-
-    margin-top:20px;
-    margin-bottom:30px;
-
+    margin-bottom:20px;
 }
 
-.summary table{
-
-    width:100%;
-    border-collapse:collapse;
-
-}
-
-.summary td{
-
-    padding:10px;
-    border:1px solid #ddd;
-
+.summary p{
+    margin:3px 0;
+    font-size:11px;
 }
 
 table{
-
     width:100%;
     border-collapse:collapse;
-    margin-top:20px;
-
+    margin-top:10px;
+    margin-bottom:20px;
+    font-size:11px;
 }
 
 th{
-
-    background:#2f3e46;
-    color:white;
-    padding:10px;
+    background:#1f2937;
+    color:#fff;
+    padding:7px;
     border:1px solid #ccc;
-
+    text-align:left;
+    font-size:11px;
 }
 
 td{
-
-    padding:10px;
     border:1px solid #ccc;
-
-}
-    h2{
-
-    margin-top:35px;
-    color:#2d3748;
-
+    padding:6px;
+    font-size:11px;
+    vertical-align:top;
+    word-break:break-word;
 }
 
-tr:hover{
-
-    background:#f7f7f7;
-
+.success{
+    background:#d9f2d9;
 }
 
-.section{
-
-    margin-top:35px;
-
+.failed{
+    background:#f8d7da;
 }
 
+.no-fail{
+    text-align:center;
+    font-style:italic;
+}
+
+.footer{
+    margin-top:10px;
+    font-size:10px;
+    color:#666;
+}
 </style>
 
 </head>
