@@ -177,13 +177,19 @@ module.exports = async function globalTeardown() {
     const color = data.failed === 0 ? "#d4edda" : "#f8d7da";
 
     platformRows += `
-      <tr style="background:${color}">
-        <td>${platform}</td>
-        <td>${data.total}</td>
-        <td>${data.passed}</td>
-        <td>${data.failed}</td>
-        <td>${data.submissonFailed || 0}</td>
-        <td>${data.linkFailed || 0}</td>
+      <tr class="${data.failed === 0 ? "row-pass" : "row-fail"}">
+        <td><b>${platform}</b></td>
+        <td style="text-align:center">${data.total}</td>
+        <td style="text-align:center" class="text-pass">${data.passed}</td>
+        <td style="text-align:center" class="${
+          data.failed > 0 ? "text-fail" : ""
+        }">${data.failed}</td>
+        <td style="text-align:center" class="${
+          data.submissonFailed > 0 ? "text-fail" : ""
+        }">${data.submissonFailed || 0}</td>
+        <td style="text-align:center" class="${
+          data.linkFailed > 0 ? "text-fail" : ""
+        }">${data.linkFailed || 0}</td>
       </tr>`;
   }
 
@@ -258,47 +264,37 @@ module.exports = async function globalTeardown() {
         entry.cookie,
         entry.legal,
       ]
-        .filter((t) => t && t.reason && t.state === "fail")
+        .filter((t) => t && t.reason)
         .map((t) => t.reason)
         .filter((v, i, a) => a.indexOf(v) === i)
         .join("\n");
 
-      const cellStyle = (t) => {
-        if (!t)
-          return `style="text-align:center;background:#f0f0f0;color:#999;"`;
+      const rowClass = anyFailed ? "row-fail" : "row-pass";
+      const cellText = (t) => {
+        if (!t) return `<td style="text-align:center;color:#9ca3af;">-</td>`;
         if (t.state === "pass")
-          return `style="text-align:center;background:#c3e6cb;color:#155724;font-weight:bold;"`;
+          return `<td style="text-align:center" class="text-pass">Passed</td>`;
         if (t.state === "na")
-          return `style="text-align:center;background:#f8d7da;color:#721c24;font-weight:bold;"`;
-        return `style="text-align:center;background:#f8d7da;color:#721c24;font-weight:bold;"`;
+          return `<td style="text-align:center" class="text-na">NA</td>`;
+        return `<td style="text-align:center" class="text-fail">Failed</td>`;
       };
 
       allTestRows += `
-        <tr style="background:${rowBg}">
+        <tr class="${rowClass}">
           <td>${entry.platform}</td>
           <td>${entry.siteName}</td>
           <td>
             ${
               entry.siteUrl
-                ? `<a href="${entry.siteUrl}" target="_blank" style="color:#0066cc;text-decoration:none;font-size:10px;">${entry.siteUrl}</a>`
+                ? `<a href="${entry.siteUrl}" target="_blank" class="url-link">${entry.siteUrl}</a>`
                 : entry.siteName
             }
           </td>
-          <td ${cellStyle(entry.submission)}>${
-        entry.submission ? entry.submission.icon : "-"
-      }</td>
-          <td ${cellStyle(entry.privacy)}>${
-        entry.privacy ? entry.privacy.icon : "-"
-      }</td>
-          <td ${cellStyle(entry.cookie)}>${
-        entry.cookie ? entry.cookie.icon : "-"
-      }</td>
-          <td ${cellStyle(entry.legal)}>${
-        entry.legal ? entry.legal.icon : "-"
-      }</td>
-          <td style="white-space:pre-wrap;font-size:10px;">${
-            failReasons || "—"
-          }</td>
+          ${cellText(entry.submission)}
+          ${cellText(entry.privacy)}
+          ${cellText(entry.cookie)}
+          ${cellText(entry.legal)}
+          <td class="reason-cell">${failReasons || "—"}</td>
         </tr>`;
     }
   }
@@ -322,83 +318,3 @@ module.exports = async function globalTeardown() {
 if (require.main === module) {
   module.exports();
 }
-
-// <!DOCTYPE html>
-// <html>
-// <head>
-// <meta charset="UTF-8">
-// <title>Playwright Test Report</title>
-// <style>
-// body{font-family:Arial,Helvetica,sans-serif;background:#f5f5f5;color:#333;margin:20px;font-size:11px;line-height:1.3;}
-// .container{max-width:1100px;margin:auto;background:#fff;padding:20px;border:1px solid #ddd;}
-// h1{font-size:22px;margin:0 0 10px;color:#1f2937;}
-// h2{font-size:16px;margin:20px 0 10px;}
-// .summary{margin-bottom:20px;}
-// .summary p{margin:3px 0;font-size:11px;}
-// table{width:100%;border-collapse:collapse;margin-top:10px;margin-bottom:20px;font-size:11px;}
-// th{background:#1f2937;color:#fff;padding:7px;border:1px solid #ccc;text-align:left;font-size:11px;}
-// td{border:1px solid #ccc;padding:6px;font-size:11px;vertical-align:top;word-break:break-word;}
-// .success{background:#d9f2d9;}
-// .failed{background:#f8d7da;}
-// .no-fail{text-align:center;font-style:italic;}
-// .footer{margin-top:40px;}
-// .status-pass{color:green;}
-// .status-fail{color:red;}
-// </style>
-// </head>
-// <body>
-// <div class="container">
-
-// <h1>Playwright Test Report ({{DATE}})</h1>
-
-// <p>
-//   <b>Status :</b>
-//   <span class="status-{{STATUS_CLASS}}" style="font-size:12px;font-weight:bold;">{{OVERALL}}</span>
-// </p>
-
-// <div class="section">
-// <h2>Platform Summary</h2>
-// <table>
-// <thead>
-// <tr>
-// <th>Platform</th>
-// <th>Total Test Cases</th>
-// <th>Passed</th>
-// <th>Failed</th>
-// <th>Submission Failed</th>
-// <th>Privacy/Cookie/Legal Link Failed</th>
-// </tr>
-// </thead>
-// <tbody>
-// {{PLATFORM_ROWS}}
-// </tbody>
-// </table>
-// </div>
-
-// <div class="section">
-// <h2>All Test Details</h2>
-// <table>
-// <thead>
-// <tr>
-// <th>Platform</th>
-// <th>Site Name</th>
-// <th>URL</th>
-// <th>Submission</th>
-// <th>Privacy</th>
-// <th>Cookie</th>
-// <th>Legal</th>
-// <th>Failure Reason</th>
-// </tr>
-// </thead>
-// <tbody>
-// {{ALL_TEST_ROWS}}
-// </tbody>
-// </table>
-// </div>
-
-// <hr style="margin-top:40px;">
-// <p style="text-align:center;font-size:10px;color:#777;">Generated automatically by Playwright Automation Framework</p>
-
-// </div>
-// </body>
-// </html>
