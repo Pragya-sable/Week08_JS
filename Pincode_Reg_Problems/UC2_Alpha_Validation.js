@@ -132,8 +132,7 @@ module.exports = async function globalTeardown() {
           platformSummary[platform].failed++;
           totalFailed++;
           if (isPrivacy || isCookie || isLegal) {
-            platformSummary[platform].pclFailed =
-              (platformSummary[platform].pclFailed || 0) + 1;
+            platformSummary[platform].linkFailed++;
           }
           if (title.includes("Successful form submission")) {
             platformSummary[platform].submissonFailed =
@@ -183,48 +182,123 @@ module.exports = async function globalTeardown() {
         <td>${data.total}</td>
         <td>${data.passed}</td>
         <td>${data.failed}</td>
-        <td>${data.submissonFailed}</td>
-        <td>${data.linkFailed}</td>
+        <td>${data.submissonFailed || 0}</td>
+        <td>${data.linkFailed || 0}</td>
       </tr>`;
+  }
+
+  // Group tests by platform + siteUrl (one row per URL)
+  const groupedMap = {};
+  for (const test of allTests) {
+    const key = `${test.platform}||${test.siteUrl || test.siteName}`;
+    if (!groupedMap[key]) {
+      groupedMap[key] = {
+        platform: test.platform,
+        siteName: test.siteName,
+        siteUrl: test.siteUrl,
+        submission: null,
+        privacy: null,
+        cookie: null,
+        legal: null,
+        reasons: [],
+      };
+    }
+    const entry = groupedMap[key];
+    const isNA =
+      test.status !== "passed" &&
+      ((test.isPrivacy && test.reason.includes("Privacy notice link")) ||
+        (test.isCookie && test.reason.includes("Cookies notice link")) ||
+        (test.isLegal && test.reason.includes("Legal notice link")));
+    const statusIcon = test.status === "passed" ? "✅" : isNA ? "NA" : "❌";
+    const cellState = test.status === "passed" ? "pass" : isNA ? "na" : "fail";
+    if (test.isSubmission)
+      entry.submission = {
+        icon: statusIcon,
+        state: cellState,
+        reason: test.reason,
+      };
+    if (test.isPrivacy)
+      entry.privacy = {
+        icon: statusIcon,
+        state: cellState,
+        reason: test.reason,
+      };
+    if (test.isCookie)
+      entry.cookie = {
+        icon: statusIcon,
+        state: cellState,
+        reason: test.reason,
+      };
+    if (test.isLegal)
+      entry.legal = { icon: statusIcon, state: cellState, reason: test.reason };
+    if (test.reason && !isNA) entry.reasons.push(test.reason);
   }
 
   let allTestRows = "";
 
-  if (allTests.length === 0) {
+  if (Object.keys(groupedMap).length === 0) {
     allTestRows = `
       <tr>
-        <td colspan="8" style="text-align:center;background:#d4edda;font-weight:bold;">
+        <td colspan="7" style="text-align:center;background:#d4edda;font-weight:bold;">
           No test cases found.
         </td>
       </tr>`;
   } else {
-    for (const test of allTests) {
-      const rowBg = test.status === "passed" ? "#d9f2d9" : "#f8d7da";
+    for (const entry of Object.values(groupedMap)) {
+      const anyFailed = [
+        entry.submission,
+        entry.privacy,
+        entry.cookie,
+        entry.legal,
+      ].some((t) => t && t.state !== "pass");
+      const rowBg = anyFailed ? "#fdecea" : "#d9f2d9";
+      const failReasons = [
+        entry.submission,
+        entry.privacy,
+        entry.cookie,
+        entry.legal,
+      ]
+        .filter((t) => t && t.reason && t.state === "fail")
+        .map((t) => t.reason)
+        .filter((v, i, a) => a.indexOf(v) === i)
+        .join("\n");
+
+      const cellStyle = (t) => {
+        if (!t)
+          return `style="text-align:center;background:#f0f0f0;color:#999;"`;
+        if (t.state === "pass")
+          return `style="text-align:center;background:#c3e6cb;color:#155724;font-weight:bold;"`;
+        if (t.state === "na")
+          return `style="text-align:center;background:#f8d7da;color:#721c24;font-weight:bold;"`;
+        return `style="text-align:center;background:#f8d7da;color:#721c24;font-weight:bold;"`;
+      };
+
       allTestRows += `
         <tr style="background:${rowBg}">
-          <td>${test.platform}</td>
-          <td>${test.siteName}</td>
+          <td>${entry.platform}</td>
+          <td>${entry.siteName}</td>
           <td>
-            <b>${test.testName}</b>
             ${
-              test.siteUrl
-                ? `<br><a href="${test.siteUrl}" target="_blank" style="font-size:9px;color:#0066cc;text-decoration:none;">${test.siteUrl}</a>`
-                : ""
+              entry.siteUrl
+                ? `<a href="${entry.siteUrl}" target="_blank" style="color:#0066cc;text-decoration:none;font-size:10px;">${entry.siteUrl}</a>`
+                : entry.siteName
             }
           </td>
-          <td style="text-align:center">${
-            test.isSubmission ? (test.status === "passed" ? "✅" : "❌") : "-"
+          <td ${cellStyle(entry.submission)}>${
+        entry.submission ? entry.submission.icon : "-"
+      }</td>
+          <td ${cellStyle(entry.privacy)}>${
+        entry.privacy ? entry.privacy.icon : "-"
+      }</td>
+          <td ${cellStyle(entry.cookie)}>${
+        entry.cookie ? entry.cookie.icon : "-"
+      }</td>
+          <td ${cellStyle(entry.legal)}>${
+        entry.legal ? entry.legal.icon : "-"
+      }</td>
+          <td style="white-space:pre-wrap;font-size:10px;">${
+            failReasons || "—"
           }</td>
-          <td style="text-align:center">${
-            test.isPrivacy ? (test.status === "passed" ? "✅" : "❌") : "-"
-          }</td>
-          <td style="text-align:center">${
-            test.isCookie ? (test.status === "passed" ? "✅" : "❌") : "-"
-          }</td>
-          <td style="text-align:center">${
-            test.isLegal ? (test.status === "passed" ? "✅" : "❌") : "-"
-          }</td>
-          <td style="white-space:pre-wrap;">${test.reason || "—"}</td>
         </tr>`;
     }
   }
@@ -308,7 +382,7 @@ if (require.main === module) {
 // <tr>
 // <th>Platform</th>
 // <th>Site Name</th>
-// <th>Test Case Name</th>
+// <th>URL</th>
 // <th>Submission</th>
 // <th>Privacy</th>
 // <th>Cookie</th>
