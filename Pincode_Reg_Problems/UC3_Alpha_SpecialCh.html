@@ -1,95 +1,212 @@
 <!DOCTYPE html>
 <html>
-<head>
-<meta charset="UTF-8">
-<title>Playwright Test Report</title>
-<style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Segoe UI', Arial, sans-serif; background: #eef2f7; color: #2d3748; font-size: 12px; padding: 24px; }
-.container { max-width: 1200px; margin: auto; background: #fff; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); overflow: hidden; }
-.header { background: linear-gradient(135deg, #1f2937 0%, #374151 100%); color: #fff; padding: 24px 28px; }
-.header h1 { font-size: 20px; font-weight: 700; letter-spacing: 0.3px; }
-.header p { font-size: 11px; color: #9ca3af; margin-top: 4px; }
-.status-bar { padding: 12px 28px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; font-size: 12px; }
-.status-pass { color: #16a34a; font-weight: 700; }
-.status-fail { color: #dc2626; font-weight: 700; }
-.content { padding: 24px 28px; }
-h2 { font-size: 14px; font-weight: 700; color: #1f2937; margin: 0 0 12px; padding-bottom: 6px; border-bottom: 2px solid #e5e7eb; }
-.section { margin-bottom: 32px; }
-table { width: 100%; border-collapse: collapse; font-size: 11.5px; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 6px rgba(0,0,0,0.07); }
-th { background: #1f2937; color: #f9fafb; padding: 10px 12px; text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; }
-td { border-bottom: 1px solid #e5e7eb; padding: 9px 12px; vertical-align: middle; word-break: break-word; }
-tr:last-child td { border-bottom: none; }
-tr:hover td { background: rgba(0,0,0,0.02); }
-.row-pass { background: #f0fdf4; }
-.row-fail { background: #fff5f5; }
-.text-pass { color: #16a34a; font-weight: 600; }
-.text-fail { color: #dc2626; font-weight: 600; }
-.text-na { color: #d97706; font-weight: 600; }
-.url-link { color: #2563eb; text-decoration: none; font-size: 10.5px; }
-.url-link:hover { text-decoration: underline; }
-.reason-cell { font-size: 10.5px; color: #6b7280; white-space: pre-wrap; }
-.footer { text-align: center; font-size: 10px; color: #9ca3af; padding: 16px; border-top: 1px solid #e5e7eb; }
-</style>
-</head>
-<body>
-<div class="container">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Playwright Test Report</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: "Segoe UI", Arial, sans-serif;
+        background: #f4f6f9;
+        color: #1a202c;
+        font-size: 12px;
+        padding: 30px;
+      }
+      .container {
+        max-width: 1200px;
+        margin: auto;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+      .header {
+        background: #1e3a5f;
+        color: #fff;
+        padding: 24px 30px;
+      }
+      .header h1 {
+        font-size: 20px;
+        font-weight: 600;
+      }
+      .header p {
+        font-size: 11px;
+        color: #a0b4c8;
+        margin-top: 4px;
+      }
+      .status-bar {
+        padding: 12px 30px;
+        background: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+        font-size: 12px;
+      }
+      .status-pass {
+        color: #1a7a3c;
+        font-weight: 700;
+      }
+      .status-fail {
+        color: #c0392b;
+        font-weight: 700;
+      }
+      .content {
+        padding: 24px 30px;
+      }
+      h2 {
+        font-size: 13px;
+        font-weight: 700;
+        color: #1e3a5f;
+        margin: 0 0 12px;
+        padding-bottom: 7px;
+        border-bottom: 2px solid #1e3a5f;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .section {
+        margin-bottom: 32px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11.5px;
+        border: 1px solid #ced4da;
+      }
+      th {
+        background: #1e3a5f;
+        color: #fff;
+        padding: 10px 13px;
+        text-align: left;
+        font-size: 10.5px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        border-right: 1px solid #2d5282;
+      }
+      th:last-child {
+        border-right: none;
+      }
+      td {
+        padding: 9px 13px;
+        vertical-align: middle;
+        word-break: break-word;
+        border: 1px solid #dee2e6;
+      }
+      .row-pass {
+        background: #eaf7ee;
+      }
+      .row-pass:hover {
+        background: #d4edda;
+      }
+      .row-fail {
+        background: #fdf0ef;
+      }
+      .row-fail:hover {
+        background: #f8d7da;
+      }
+      .badge {
+        display: inline-block;
+        padding: 2px 10px;
+        border-radius: 4px;
+        font-size: 10.5px;
+        font-weight: 600;
+      }
+      .badge-pass {
+        background: #d4edda;
+        color: #155724;
+      }
+      .badge-fail {
+        background: #f8d7da;
+        color: #721c24;
+      }
+      .badge-na {
+        background: #fff3cd;
+        color: #856404;
+      }
+      .badge-dash {
+        color: #adb5bd;
+      }
+      .url-link {
+        color: #1e3a5f;
+        text-decoration: none;
+        font-size: 10.5px;
+      }
+      .url-link:hover {
+        text-decoration: underline;
+      }
+      .reason-cell {
+        font-size: 10.5px;
+        color: #6c757d;
+        white-space: pre-wrap;
+      }
+      .footer {
+        text-align: center;
+        font-size: 10px;
+        color: #adb5bd;
+        padding: 16px;
+        border-top: 1px solid #dee2e6;
+        background: #f8f9fa;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🎭 Playwright Test Report</h1>
+        <p>Generated on {{DATE}}</p>
+      </div>
 
-<div class="header">
-  <h1>🎭 Playwright Test Report</h1>
-  <p>Generated on {{DATE}}</p>
-</div>
+      <div class="status-bar">
+        <b>Status :</b>
+        <span class="status-{{STATUS_CLASS}}">{{OVERALL}}</span>
+      </div>
 
-<div class="status-bar">
-  <b>Status :</b>
-  <span class="status-{{STATUS_CLASS}}">{{OVERALL}}</span>
-</div>
+      <div class="content">
+        <div class="section">
+          <h2>Platform Summary</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Platform</th>
+                <th>Total Tests</th>
+                <th>Passed</th>
+                <th>Failed</th>
+                <th>Submission Failed</th>
+                <th>Privacy/Cookie/Legal Failed</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{PLATFORM_ROWS}}
+            </tbody>
+          </table>
+        </div>
 
-<div class="content">
-
-<div class="section">
-<h2>Platform Summary</h2>
-<table>
-<thead>
-<tr>
-<th>Platform</th>
-<th>Total Tests</th>
-<th>Passed</th>
-<th>Failed</th>
-<th>Submission Failed</th>
-<th>Privacy/Cookie/Legal Failed</th>
-</tr>
-</thead>
-<tbody>
-{{PLATFORM_ROWS}}
-</tbody>
-</table>
-</div>
-
-<div class="section">
-<h2>All Test Details</h2>
-<table>
-<thead>
-<tr>
-<th>Platform</th>
-<th>Site Name</th>
-<th>URL</th>
-<th style="text-align:center">Submission</th>
-<th style="text-align:center">Privacy</th>
-<th style="text-align:center">Cookie</th>
-<th style="text-align:center">Legal</th>
-<th>Failure Reason</th>
-</tr>
-</thead>
-<tbody>
-{{ALL_TEST_ROWS}}
-</tbody>
-</table>
-</div>
-
-</div>
-<div class="footer">Generated automatically by Playwright Automation Framework</div>
-
-</div>
-</body>
+        <div class="section">
+          <h2>All Test Details</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Platform</th>
+                <th>Site Name</th>
+                <th>URL</th>
+                <th style="text-align: center">Submission</th>
+                <th style="text-align: center">Privacy</th>
+                <th style="text-align: center">Cookie</th>
+                <th style="text-align: center">Legal</th>
+                <th>Failure Reason</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{ALL_TEST_ROWS}}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="footer">
+        Generated automatically by Playwright Automation Framework
+      </div>
+    </div>
+  </body>
 </html>
