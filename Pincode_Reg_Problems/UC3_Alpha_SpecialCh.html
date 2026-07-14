@@ -1,13 +1,8 @@
 node -e "const fs=require('fs'); const
-r=JSON.parse(fs.readFileSync('./test-results/results.json','utf8')); const
-test=r.suites[0].specs[0].tests[0];
-console.log(JSON.stringify(test.results[test.results.length-1], null, 2));" node
--e "const fs=require('fs'); const
 r=JSON.parse(fs.readFileSync('./test-results/results.json','utf8')); for(const
 suite of r.suites||[]){ for(const spec of suite.specs||[]){ for(const test of
 spec.tests||[]){ for(const result of test.results||[]){
 if(result.status==='failed'||result.status==='timedOut'){
 console.log('TITLE:',spec.title);
 console.log('ERROR:',JSON.stringify(result.error));
-console.log('ERRORS:',JSON.stringify(result.errors)); console.log('---');
-}}}}}}"
+console.log('ERRORS:',JSON.stringify(result.errors)); console.log('---'); }}}}}"
