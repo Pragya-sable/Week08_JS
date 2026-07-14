@@ -11,59 +11,58 @@
       }
       body {
         font-family: "Segoe UI", Arial, sans-serif;
-        background: #f4f6f9;
-        color: #1a202c;
+        background: #eef2f7;
+        color: #2d3748;
         font-size: 12px;
-        padding: 30px;
+        padding: 24px;
       }
       .container {
-        max-width: 1200px;
+        max-width: 1300px;
         margin: auto;
         background: #fff;
-        border-radius: 8px;
-        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
         overflow: hidden;
       }
       .header {
-        background: #1e3a5f;
+        background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
         color: #fff;
-        padding: 24px 30px;
+        padding: 24px 28px;
       }
       .header h1 {
         font-size: 20px;
-        font-weight: 600;
+        font-weight: 700;
+        letter-spacing: 0.3px;
       }
       .header p {
         font-size: 11px;
-        color: #a0b4c8;
+        color: #9ca3af;
         margin-top: 4px;
       }
       .status-bar {
-        padding: 12px 30px;
-        background: #f8f9fa;
-        border-bottom: 1px solid #dee2e6;
+        padding: 12px 28px;
+        background: #f9fafb;
+        border-bottom: 1px solid #e5e7eb;
         font-size: 12px;
       }
       .status-pass {
-        color: #1a7a3c;
+        color: #16a34a;
         font-weight: 700;
       }
       .status-fail {
-        color: #c0392b;
+        color: #dc2626;
         font-weight: 700;
       }
       .content {
-        padding: 24px 30px;
+        padding: 24px 28px;
       }
       h2 {
-        font-size: 13px;
+        font-size: 14px;
         font-weight: 700;
-        color: #1e3a5f;
+        color: #1f2937;
         margin: 0 0 12px;
-        padding-bottom: 7px;
-        border-bottom: 2px solid #1e3a5f;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
+        padding-bottom: 6px;
+        border-bottom: 2px solid #e5e7eb;
       }
       .section {
         margin-bottom: 32px;
@@ -72,64 +71,48 @@
         width: 100%;
         border-collapse: collapse;
         font-size: 11.5px;
-        border: 1px solid #ced4da;
+        border: 1px solid #d1d5db;
       }
       th {
-        background: #1e3a5f;
-        color: #fff;
-        padding: 10px 13px;
+        background: #1f2937;
+        color: #f9fafb;
+        padding: 10px 12px;
         text-align: left;
-        font-size: 10.5px;
+        font-size: 11px;
         font-weight: 600;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.4px;
         text-transform: uppercase;
-        border-right: 1px solid #2d5282;
-      }
-      th:last-child {
-        border-right: none;
+        border: 1px solid #d1d5db;
       }
       td {
-        padding: 9px 13px;
+        border: 1px solid #d1d5db;
+        padding: 9px 12px;
         vertical-align: middle;
         word-break: break-word;
-        border: 1px solid #dee2e6;
       }
       .row-pass {
-        background: #eaf7ee;
-      }
-      .row-pass:hover {
-        background: #d4edda;
+        background: #dcfce7;
       }
       .row-fail {
-        background: #fdf0ef;
+        background: #fee2e2;
       }
-      .row-fail:hover {
-        background: #f8d7da;
+      tr:hover td {
+        filter: brightness(0.96);
       }
-      .badge {
-        display: inline-block;
-        padding: 2px 10px;
-        border-radius: 4px;
-        font-size: 10.5px;
-        font-weight: 600;
+      .text-pass {
+        color: #15803d;
+        font-weight: 700;
       }
-      .badge-pass {
-        background: #d4edda;
-        color: #155724;
+      .text-fail {
+        color: #b91c1c;
+        font-weight: 700;
       }
-      .badge-fail {
-        background: #f8d7da;
-        color: #721c24;
-      }
-      .badge-na {
-        background: #fff3cd;
-        color: #856404;
-      }
-      .badge-dash {
-        color: #adb5bd;
+      .text-na {
+        color: #b45309;
+        font-weight: 700;
       }
       .url-link {
-        color: #1e3a5f;
+        color: #2563eb;
         text-decoration: none;
         font-size: 10.5px;
       }
@@ -138,16 +121,45 @@
       }
       .reason-cell {
         font-size: 10.5px;
-        color: #6c757d;
+        color: #4b5563;
         white-space: pre-wrap;
       }
       .footer {
         text-align: center;
         font-size: 10px;
-        color: #adb5bd;
+        color: #9ca3af;
         padding: 16px;
-        border-top: 1px solid #dee2e6;
-        background: #f8f9fa;
+        border-top: 1px solid #e5e7eb;
+      }
+      .expandable {
+        cursor: pointer;
+        user-select: none;
+      }
+      .expandable:hover td {
+        filter: brightness(0.93);
+      }
+      .detail-row {
+        display: none;
+      }
+      .detail-row td {
+        padding: 0;
+        border-top: none;
+      }
+      .detail-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11px;
+      }
+      .detail-table th {
+        background: #374151;
+        color: #f9fafb;
+        padding: 7px 10px;
+        font-size: 10.5px;
+        text-transform: uppercase;
+      }
+      .detail-table td {
+        padding: 7px 10px;
+        border: 1px solid #e5e7eb;
       }
     </style>
   </head>
@@ -173,33 +185,14 @@
                 <th>Total Tests</th>
                 <th>Passed</th>
                 <th>Failed</th>
+                <th>Privacy Failed</th>
+                <th>Cookie Failed</th>
+                <th>Legal Failed</th>
                 <th>Submission Failed</th>
-                <th>Privacy/Cookie/Legal Failed</th>
               </tr>
             </thead>
             <tbody>
               {{PLATFORM_ROWS}}
-            </tbody>
-          </table>
-        </div>
-
-        <div class="section">
-          <h2>All Test Details</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Platform</th>
-                <th>Site Name</th>
-                <th>URL</th>
-                <th style="text-align: center">Submission</th>
-                <th style="text-align: center">Privacy</th>
-                <th style="text-align: center">Cookie</th>
-                <th style="text-align: center">Legal</th>
-                <th>Failure Reason</th>
-              </tr>
-            </thead>
-            <tbody>
-              {{ALL_TEST_ROWS}}
             </tbody>
           </table>
         </div>
@@ -208,5 +201,14 @@
         Generated automatically by Playwright Automation Framework
       </div>
     </div>
+    <script>
+      function toggleDetail(platform) {
+        const row = document.getElementById("detail-" + platform);
+        const isOpen = row.style.display === "table-row";
+        row.style.display = isOpen ? "none" : "table-row";
+        const arrow = row.previousElementSibling.querySelector("td b");
+        arrow.textContent = (isOpen ? "▶ " : "▼ ") + platform;
+      }
+    </script>
   </body>
 </html>
